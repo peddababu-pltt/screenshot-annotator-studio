@@ -1,0 +1,42 @@
+{
+  "manifest_version": "1",
+  "id": "annotator-app",
+  "name": "Screenshot Annotator",
+  "version": "1.0.0",
+  "developer": "Your Team",
+  "category": "Productivity",
+  "tagline": "Upload, annotate, and export screenshots",
+  "description": "Upload a screenshot, mark it up with arrows, shapes, text, and highlights, then export as PNG. Runs 100% in the browser.",
+  "icon": "Scissors",
+  "gradient": {
+    "bg": "linear-gradient(135deg, #2563EB, #7C3AED)",
+    "text": "#fff"
+  },
+  "sdk": {
+    "frontend": "^0.1.16",
+    "backend": "^0.1.8"
+  },
+  "platform": {
+    "min_version": "0.1.0"
+  },
+  "capabilities": {
+    "frontend": true,
+    "backend": true,
+    "database": false,
+    "webhooks": false,
+    "scheduled_jobs": false,
+    "file_uploads": false,
+    "external_network": ["cdn.jsdelivr.net"]
+  },
+  "frontend": {
+    "entry": "./frontend/src/index.tsx",
+    "sandbox": true
+  },
+  "backend": {
+    "entry": "./backend/api/main.py"
+  },
+  "public_routes": [
+    "/health",
+    "/stats"
+  ]
+}

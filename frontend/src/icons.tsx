@@ -1,0 +1,57 @@
+export function Ic({ d, size = 16, className }: { d: string[]; size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      {d.map((p, i) => <path key={i} d={p} />)}
+    </svg>
+  )
+}
+
+export const I = {
+  select: <Ic d={["M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z", "M13 13l6 6"]} />,
+  rect: <Ic d={["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z"]} />,
+  rrect: <Ic d={["M4 3h12a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H4z"]} />,
+  circle: <Ic d={["M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0 -18"]} />,
+  arrow: <Ic d={["M4 20L20 4", "M8 4h12v12"]} />,
+  line: <Ic d={["M4 20L20 4"]} />,
+  text: <Ic d={["M4 7V4h16v3", "M12 4v16", "M8 20h8"]} />,
+  number: <Ic d={["M4 8h5v8", "M11 8h5v8", "M14 8V6", "M15 6H13"]} />,
+  highlight: <Ic d={["M9 11l6 4M4 20l4-4M14 4l6 6"]} />,
+  blur: <Ic d={["M12 3a6 6 0 0 0 0 18a6 6 0 0 0 0-18zM12 3v18M6 6h2M18 6h2M6 18h2M18 18h2"]} />,
+  pixelate: <Ic d={["M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z"]} />,
+  eraser: <Ic d={["M20 20H8l-6-6a2 2 0 0 1 0-2.8L13.2 2a2 2 0 0 1 2.8 0l5 5a2 2 0 0 1 0 2.8L11 20"]} />,
+  insertImage: <Ic d={["M4 4h16v16H4z", "M4 16l5-5 4 4 3-3 4 4", "M9 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"]} />,
+  background: <Ic d={["M3 3h18v18H3z", "M3 16l5-5 4 4 5-5 4 4"]} />,
+  sun: <Ic d={["M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M12 4.5v-2M12 21.5v-2M4.5 12h-2M21.5 12h-2M6.3 6.3l-1.4-1.4M19.1 19.1l-1.4-1.4M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"]} />,
+  moon: <Ic d={["M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"]} />,
+  globe: <Ic d={["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", "M3 12h18", "M12 3a13 13 0 0 1 0 18M12 3a13 13 0 0 0 0 18"]} />,
+  userCircle: <Ic d={["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", "M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M5.5 18.5a7 7 0 0 1 13 0"]} />,
+  ocrScan: <Ic d={["M4 7V4h4M16 4h4v3M20 17v3h-4M8 20H4v-3", "M6 9h12M6 13h8"]} />,
+  crop: <Ic d={["M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14"]} />,
+  pen: <Ic d={["M4 20l4-1 11-11a2.8 2.8 0 0 0-4-4L5 15l-1 4z", "M14 6l4 4"]} />,
+  callout: <Ic d={["M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V5z"]} />,
+  undo: <Ic d={["M9 14L4 9l5-5", "M4 9h11a5 5 0 0 1 5 5v1a5 5 0 0 1-5 5H8"]} />,
+  redo: <Ic d={["M15 14l5-5-5-5", "M20 9H9a5 5 0 0 0-5 5v1a5 5 0 0 0 5 5h7"]} />,
+  save: <Ic d={["M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z", "M17 21v-8H7v8", "M7 3v5h8"]} />,
+  export: <Ic d={["M12 3v12M7 10l5 5 5-5", "M5 21h14"]} />,
+  preview: <Ic d={["M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z", "M9 12a3 3 0 1 0 6 0 3 3 0 1 0-6 0"]} />,
+  upload: <Ic d={["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M17 8l-5-5-5 5", "M12 3v12"]} />,
+  plus: <Ic d={["M12 5v14M5 12h14"]} />,
+  minus: <Ic d={["M5 12h14"]} />,
+  trash: <Ic d={["M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"]} />,
+  layers: <Ic d={["M12 2l10 6-10 6L2 8z", "M2 14l10 6 10-6"]} />,
+  eye: <Ic d={["M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z", "M12 12a3 3 0 1 0 6 0 3 3 0 1 0-6 0"]} />,
+  grid: <Ic d={["M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"]} />,
+  zoomIn: <Ic d={["M11 4a7 7 0 1 1 0 14a7 7 0 1 1 0-14zM8 11h6M11 8v6M21 21l-4.3-4.3"]} />,
+  zoomOut: <Ic d={["M11 4a7 7 0 1 1 0 14a7 7 0 1 1 0-14zM8 11h6M21 21l-4.3-4.3"]} />,
+  home: <Ic d={["M3 12l9-9 9 9M5 10v10h14V10"]} />,
+  pages: <Ic d={["M4 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H4z", "M17 4V2H4v13"]} />,
+  fit: <Ic d={["M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"]} />,
+  copy: <Ic d={["M9 9h11v11H9zM5 15V5h10"]} />,
+  check: <Ic d={["M20 6L9 17l-5-5"]} />,
+  close: <Ic d={["M18 6L6 18M6 6l12 12"]} />,
+  danger: <Ic d={["M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z", "M12 9v4M12 17h.01"]} />,
+  chevD: <Ic d={["M6 9l6 6 6-6"]} />,
+  chevR: <Ic d={["M9 6l6 6-6 6"]} />,
+  keyF: <Ic d={["M3 5v14M21 5v14"]} />,
+  link: <Ic d={["M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7", "M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"]} />,
+}

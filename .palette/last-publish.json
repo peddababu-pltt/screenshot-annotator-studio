@@ -1,0 +1,11 @@
+{
+  "id": 1546,
+  "plugin_id": "annotator-app",
+  "version": "1.0.0",
+  "env": "staging",
+  "url": "https://apps-api.pltt.xyz",
+  "publish_type": "preview",
+  "preview_url": "https://apps.pltt.xyz/apps/annotator-app?preview_publish_id=1546&preview_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9%2EeyJ0eXBlIjoiYXBwc3RvcmVfcHJldmlldyIsInB1Ymxpc2hfaWQiOjE1NDYsInBsdWdpbl9pZCI6ImFubm90YXRvci1hcHAiLCJ2ZXJzaW9uIjoiMS4wLjAiLCJidW5kbGVfc2hhMjU2IjoiMjkzZWEyNjY5NzVlYmRkZmNmMjc4YTZhOWY4MzIyOGU1ZTBmMzU1YzY4ZmJlODNmM2I4MzgxZDBiMDI0NDcwNiIsInB1Ymxpc2hlZF9ieSI6IjhhZjFmY2VkLTQwNzAtNDA1OC05ZGY0LWUzZDUxM2ZhY2Q1MSIsImV4cCI6MTc4NjQyMjQxNH0%2EeA5_ogp-Ls3snUn0OPbdLcxvEzRm4OGNPP8PMG23z0g",
+  "preview_expires_at": "2026-08-11T04:26:54.555042Z",
+  "published_at": "2026-08-10T04:26:55.832Z"
+}

@@ -1,0 +1,9 @@
+[project]
+name = "annotator-app"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.129.0",
+  "sqlalchemy>=2.0.47",
+  # `pltt test` ships the backend SDK on PYTHONPATH.
+]

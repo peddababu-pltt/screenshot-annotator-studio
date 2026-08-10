@@ -1,0 +1,8 @@
+.palette/.env.local
+.palette/*.env
+.env
+.env.local
+.env.production
+.palette/dev/backend-venv/
+.palette/test-venv/
+

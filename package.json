@@ -1,0 +1,12 @@
+{
+  "name": "annotator-app",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@palettelab/sdk": "^0.1.30",
+    "idb-keyval": "^6.3.0",
+    "jspdf": "^4.2.1",
+    "react": "^19.0.0",
+    "tesseract.js": "^7.0.0"
+  }
+}
