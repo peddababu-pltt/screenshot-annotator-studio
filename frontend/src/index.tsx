@@ -9,6 +9,8 @@ import PlatformControls from "./platformbar"
 import Home from "./home"
 import Editor from "./editor"
 
+const SESSION_KEY = "annotator_open_project"
+
 export default function AnnotatorApp(_props: PluginComponentProps) {
   const { apiFetch } = usePlatform()
   const [loaded, setLoaded] = useState(false)
@@ -22,7 +24,13 @@ export default function AnnotatorApp(_props: PluginComponentProps) {
     listProjects().then((all) => {
       if (cancelled) return
       setProjects(all)
-      setProject(all[0] ?? null)
+      // Restore last open project if session has one
+      const lastId = sessionStorage.getItem(SESSION_KEY)
+      if (lastId) {
+        const found = all.find((x) => x.id === lastId)
+        if (found) setProject(found)
+      }
+      // No lastId → stay on home page (project = null)
       setLoaded(true)
     })
     return () => {
@@ -52,12 +60,19 @@ export default function AnnotatorApp(_props: PluginComponentProps) {
 
   const openProject = async (p: Project) => {
     const all = await listProjects()
-    setProject(all.find((x) => x.id === p.id) ?? p)
+    const found = all.find((x) => x.id === p.id) ?? p
+    sessionStorage.setItem(SESSION_KEY, found.id)
+    setProject(found)
   }
 
   const saveProject = async (p: Project) => {
     await upsertProject(p)
     setProjects(await listProjects())
+  }
+
+  const exitEditor = () => {
+    sessionStorage.removeItem(SESSION_KEY)
+    setProject(null)
   }
 
   const headerExtra = <PlatformControls backend={backend} />
@@ -67,9 +82,9 @@ export default function AnnotatorApp(_props: PluginComponentProps) {
   return (
     <div style={{ fontFamily: "Inter, -apple-system, sans-serif" }}>
       {project ? (
-        <Editor key={project.id} project={project} onProject={saveProject} onExit={() => setProject(null)} onToast={toast} headerExtra={headerExtra} />
+        <Editor key={project.id} project={project} onProject={saveProject} onExit={exitEditor} onToast={toast} headerExtra={headerExtra} />
       ) : (
-        <Home projects={projects} onNew={(p) => setProject(p)} onOpen={openProject} onToast={toast} headerExtra={headerExtra} />
+        <Home projects={projects} onNew={(p) => { sessionStorage.setItem(SESSION_KEY, p.id); setProject(p) }} onOpen={openProject} onToast={toast} headerExtra={headerExtra} backend={backend} />
       )}
 
       {status && (

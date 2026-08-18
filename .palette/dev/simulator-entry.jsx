@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client"
 import { PluginProvider } from "@palettelab/sdk"
 import Plugin from "/Users/peddababu/Desktop/screenshot annotator/annotator-app/frontend/src/index.tsx"
 
-const backendBase = "http://127.0.0.1:8732"
+const backendBase = "http://127.0.0.1:8733"
 const localConnections = {}
 
 function connectionListResponse() {

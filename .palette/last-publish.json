@@ -1,11 +1,11 @@
 {
-  "id": 1549,
+  "id": 127,
   "plugin_id": "annotator-app",
-  "version": "1.0.0",
-  "env": "staging",
-  "url": "https://apps-api.pltt.xyz",
+  "version": "1.0.10",
+  "env": "production",
+  "url": "https://os-api.pltt.ai",
   "publish_type": "release",
   "preview_url": null,
   "preview_expires_at": null,
-  "published_at": "2026-08-10T05:10:43.758Z"
+  "published_at": "2026-08-18T12:34:28.083Z"
 }

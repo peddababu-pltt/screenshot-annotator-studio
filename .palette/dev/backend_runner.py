@@ -20,14 +20,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 ROOT = pathlib.Path("/Users/peddababu/Desktop/screenshot annotator/annotator-app").resolve()
 ENTRY = pathlib.Path("/Users/peddababu/Desktop/screenshot annotator/annotator-app/backend/api/main.py").resolve()
-MANIFEST = json.loads("{\"manifest_version\":\"1\",\"id\":\"annotator-app\",\"name\":\"Screenshot Annotator\",\"version\":\"1.0.0\",\"developer\":\"Your Team\",\"category\":\"Productivity\",\"tagline\":\"Upload, annotate, and export screenshots\",\"description\":\"Upload a screenshot, mark it up with arrows, shapes, text, and highlights, then export as PNG. Runs 100% in the browser.\",\"icon\":\"Scissors\",\"gradient\":{\"bg\":\"linear-gradient(135deg, #2563EB, #7C3AED)\",\"text\":\"#fff\"},\"sdk\":{\"frontend\":\"^0.1.16\",\"backend\":\"^0.1.8\"},\"platform\":{\"min_version\":\"0.1.0\"},\"capabilities\":{\"frontend\":true,\"backend\":true,\"database\":false,\"webhooks\":false,\"scheduled_jobs\":false,\"file_uploads\":false,\"external_network\":[\"cdn.jsdelivr.net\"]},\"frontend\":{\"entry\":\"./frontend/src/index.tsx\",\"sandbox\":true},\"backend\":{\"entry\":\"./backend/api/main.py\"},\"public_routes\":[\"/health\",\"/stats\"]}")
+MANIFEST = json.loads("{\"manifest_version\":\"1\",\"id\":\"annotator-app\",\"name\":\"Screenshot Annotator\",\"version\":\"1.0.6\",\"developer\":\"Your Team\",\"category\":\"Productivity\",\"tagline\":\"Upload, annotate, and export screenshots\",\"description\":\"Upload a screenshot, mark it up with arrows, shapes, text, and highlights, then export as PNG. Runs 100% in the browser.\",\"icon\":\"Scissors\",\"gradient\":{\"bg\":\"linear-gradient(135deg, #2563EB, #7C3AED)\",\"text\":\"#fff\"},\"sdk\":{\"frontend\":\"^0.1.16\",\"backend\":\"^0.1.8\"},\"platform\":{\"min_version\":\"0.1.0\"},\"capabilities\":{\"frontend\":true,\"backend\":true,\"database\":false,\"webhooks\":false,\"scheduled_jobs\":false,\"file_uploads\":false,\"external_network\":[\"cdn.jsdelivr.net\"]},\"frontend\":{\"entry\":\"./frontend/src/index.tsx\",\"sandbox\":true},\"backend\":{\"entry\":\"./backend/api/main.py\"},\"public_routes\":[\"/health\",\"/stats\"]}")
 SDK_PATH = "/Users/peddababu/.npm-global/lib/node_modules/@palettelab/cli/backend-sdk"
 DATABASE_ENABLED = bool(MANIFEST.get("database") or MANIFEST.get("capabilities", {}).get("database"))
 DATABASE_URL = os.environ.get("PALETTE_DEV_DATABASE_URL", "sqlite+aiosqlite:////Users/peddababu/Desktop/screenshot annotator/annotator-app/.palette/dev/annotator-app.sqlite3")
-DEV_SECRETS = json.loads("{\"staging_token\":\"pltt login --env staging --url https://apps-api.pltt.xyz --token pltt_c7vjsMaJ_xqUVHpeh-0LzcpPIjkP231TPqUPBimZIN8\"}")
+DEV_SECRETS = json.loads("{\"staging_token\":\"pltt login --env staging --url https://apps-api.pltt.xyz --token pltt_c7vjsMaJ_xqUVHpeh-0LzcpPIjkP231TPqUPBimZIN8\",\"PALETTE_DEV_URL\":\"https://dev-os-api.pltt.link\",\"PALETTE_DEV_TOKEN\":\"pltt_HLRfsYk4H8MYChR3rzYo2do7VQ7jtRsCOMoiRhPAjRM\",\"PALETTE_QA_URL\":\"https://qa-os-api.pltt.xyz\",\"PALETTE_QA_TOKEN\":\"pltt_7TCXnYNHyPattqvTSPu3PcQx0HBmnlD-cAmEchrjUfE\",\"PALETTE_PROD_URL\":\"https://os-api.pltt.ai\",\"PALETTE_PROD_TOKEN\":\"pltt_FGM0BiKaOodmnamqJmZ7NLuPRBGndxRHGpWRguQPqEo\"}")
 DEV_CONNECTIONS = json.loads("{}")
 DEV_APP_MOCKS = json.loads("{}")
-BACKEND_BASE = "http://127.0.0.1:8732"
+BACKEND_BASE = "http://127.0.0.1:8733"
 
 def _service_enabled(name: str) -> bool:
     services = MANIFEST.get("platform_services") or []

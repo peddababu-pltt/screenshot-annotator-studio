@@ -2,7 +2,7 @@
   "manifest_version": "1",
   "id": "annotator-app",
   "name": "Screenshot Annotator",
-  "version": "1.0.0",
+  "version": "1.0.10",
   "developer": "Your Team",
   "category": "Productivity",
   "tagline": "Upload, annotate, and export screenshots",

@@ -80,10 +80,13 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
     changed?: boolean
     before?: Project
     moved?: boolean
+    moveIds?: string[]
   }>({})
   const spaceDown = useRef(false)
+  const editIdRef = useRef<string | null>(null)
 
   projRef.current = proj
+  editIdRef.current = editId
   const page = proj.pages[proj.activePage]
 
   // ------------------------------------------------------------------- layout
@@ -123,7 +126,7 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(0, 0, pg.w, pg.h)
     if (imgRef.current) ctx.drawImage(imgRef.current, 0, 0, pg.w, pg.h)
-    for (const a of pg.annotations) if (a.visible !== false) drawAnn(ctx, a, redraw)
+    for (const a of pg.annotations) if (a.visible !== false && a.id !== editIdRef.current) drawAnn(ctx, a, redraw)
     if (mode.current === "draw" && op.current.shape) drawAnn(ctx, op.current.shape)
 
     const sels = pg.annotations.filter((a) => sel.includes(a.id) && a.visible !== false)
@@ -152,7 +155,7 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
       ctx.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h)
       ctx.restore()
     }
-  }, [sel, zoom, pan, marquee, cropRect])
+  }, [sel, zoom, pan, marquee, cropRect, stage])
 
   function nub(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
     ctx.fillStyle = "#fff"
@@ -206,7 +209,7 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
     return { x, y }
   }
 
-  useEffect(() => { redraw() }, [proj, sel, zoom, pan, marquee, editText, cropRect])
+  useEffect(() => { redraw() }, [proj, sel, zoom, pan, marquee, editText, cropRect, stage])
 
   // image per page
   useEffect(() => {
@@ -589,7 +592,7 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
       if (hit) {
         const multi = e.shiftKey || e.metaKey || e.ctrlKey
         setSel((cur) => (multi ? (cur.includes(hit.id) ? cur.filter((x) => x !== hit.id) : [...cur, hit.id]) : [hit.id]))
-        if (!multi) { mode.current = "move"; op.current = { start: pt, before: snap() } }
+        if (!multi) { mode.current = "move"; op.current = { start: pt, before: snap(), moveIds: sel.includes(hit.id) ? sel : [hit.id] } }
         return
       }
       mode.current = "marquee"
@@ -659,7 +662,8 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
     if (m === "move") {
       const d = pt.x - o.start!.x
       const dy = pt.y - o.start!.y
-      const ids = new Set(sel)
+      o.start = pt
+      const ids = new Set(o.moveIds ?? sel)
       setProj((p) => ({
         ...p, updatedAt: Date.now(),
         pages: p.pages.map((pg, i) => {
@@ -867,7 +871,7 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
           />
         </div>
         <Resizer width={sidebarW} setWidth={setSidebarW} min={160} max={420} />
-        <div ref={stageRef} style={{ flex: 1, position: "relative", overflow: "hidden", background: th.mode === "dark" ? "#0E0F11" : "#E6E6E3", touchAction: "none" }}>
+        <div ref={stageRef} style={{ flex: 1, position: "relative", overflow: "hidden", background: th.mode === "dark" ? "#0A0B10" : "#ECEDF2", touchAction: "none" }}>
           <CanvasToolbar
             hasSel={sel.length > 0}
             locked={sel.length === 1 ? !!page.annotations.find((a) => a.id === sel[0])?.locked : false}
@@ -897,7 +901,7 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
               onPointerUp={pUp}
               onPointerCancel={pUp}
             />
-            {editId && <TextOverlay page={page} annId={editId} value={editText} setValue={setEditText} onDone={commitEdit} />}
+            {editId && <TextOverlay page={page} annId={editId} value={editText} setValue={setEditText} onDone={commitEdit} scale={lr.s} />}
             <input
               ref={pickerRef}
               type="file"
@@ -1148,27 +1152,27 @@ function BottomBar({ proj, zoom, onZoom, onFit, onSwitch, onRemove, onDup, extra
       <button onClick={() => onZoom(Math.max(0.05, zoom / 1.2))} title="Zoom out" style={chip}>{I.zoomOut}</button>
       <button onClick={onFit} title={t("fitToScreen")} style={{ ...chip, fontWeight: 700 }}>{Math.round(zoom * 100)}%</button>
       <button onClick={() => onZoom(Math.min(5, zoom * 1.2))} title="Zoom in" style={chip}>{I.zoomIn}</button>
-      <div style={{ width: 1, height: 20, background: th.border }} />
-      {extra}
     </footer>
   )
 }
 
-function TextOverlay({ page, annId, value, setValue, onDone }) {
+function TextOverlay({ page, annId, value, setValue, onDone, scale = 1 }) {
   const ann = page?.annotations.find((a) => a.id === annId) as TextAnn | undefined
-  const st = stageOf(page)
-  if (!ann || !st) return null
-  const cv = document.createElement("canvas")
-  const c2 = cv.getContext("2d")
-  if (c2) {
-    c2.font = `${ann.fontWeight} ${ann.fontSize}px -apple-system, sans-serif`
-    cv.width = 2; cv.height = 2
-  }
-  const lines = value.split("\n")
-  const wpx = Math.max(60, (c2 ? c2.measureText(value || "…").width : 120) + ann.padding * 2)
-  const hpx = Math.max(28, lines.length * ann.fontSize * 1.3 + ann.padding * 2)
+  if (!ann) return null
+  const s = scale
+
+  // measure in image-space, then scale to CSS pixels
+  const mc = document.createElement("canvas")
+  const c2 = mc.getContext("2d")
+  mc.width = 2; mc.height = 2
+  if (c2) c2.font = `${ann.fontWeight} ${ann.fontSize}px Inter, -apple-system, sans-serif`
+  const lines = (value || "M").split("\n")
+  const maxLineW = lines.reduce((mx, l) => Math.max(mx, c2 ? c2.measureText(l || "M").width : 120), 80)
+  const wpxImg = ann.width ?? Math.max(80, maxLineW + ann.padding * 2 + 8)
+  const hpxImg = Math.max(ann.fontSize * 1.5, lines.length * ann.fontSize * 1.4 + ann.padding * 2)
+
   return (
-    <div style={{ position: "absolute", left: 0, top: 0 }}>
+    <div style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}>
       <textarea
         autoFocus
         value={value}
@@ -1180,24 +1184,27 @@ function TextOverlay({ page, annId, value, setValue, onDone }) {
         }}
         placeholder="Type text…"
         style={{
+          pointerEvents: "auto",
           position: "absolute",
-          left: ann.x,
-          top: ann.y,
-          width: wpx,
-          minHeight: hpx,
-          border: "1.5px dashed #2563EB",
-          borderRadius: ann.radius,
-          background: ann.bg === "transparent" ? "rgba(255,255,255,.7)" : ann.bg,
+          left: ann.x * s,
+          top: ann.y * s,
+          width: wpxImg * s,
+          minHeight: hpxImg * s,
+          border: `${Math.max(1, 1.5 / s)}px dashed #5956D6`,
+          borderRadius: ann.radius * s,
+          background: ann.bg === "transparent" ? "transparent" : ann.bg,
           color: ann.color,
-          fontSize: ann.fontSize,
+          fontSize: ann.fontSize * s,
           fontWeight: ann.fontWeight,
+          lineHeight: 1.4,
           textAlign: ann.align,
-          padding: ann.padding,
+          padding: ann.padding * s,
           boxSizing: "border-box",
           outline: "none",
           fontFamily: "Inter, -apple-system, sans-serif",
           resize: "none",
           overflow: "hidden",
+          caretColor: ann.color,
         }}
       />
     </div>
