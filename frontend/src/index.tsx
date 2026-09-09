@@ -84,7 +84,7 @@ export default function AnnotatorApp(_props: PluginComponentProps) {
       {project ? (
         <Editor key={project.id} project={project} onProject={saveProject} onExit={exitEditor} onToast={toast} headerExtra={headerExtra} />
       ) : (
-        <Home projects={projects} onNew={(p) => { sessionStorage.setItem(SESSION_KEY, p.id); setProject(p) }} onOpen={openProject} onToast={toast} headerExtra={headerExtra} backend={backend} />
+        <Home projects={projects} onNew={(p) => { sessionStorage.setItem(SESSION_KEY, p.id); setProject(p) }} onOpen={openProject} onToast={toast} backend={backend} />
       )}
 
       {status && (

@@ -1,16 +1,19 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import type { ReactNode } from "react"
 import type { Project } from "./types"
 import { listProjects, deleteProject, upsertProject } from "./persist"
 import { I } from "./icons"
 import { readImageFile } from "./files"
 import { drawAnn, preloadAnnImages } from "./draw"
-import { useTheme, type Theme } from "./theme"
+import { useTheme, type Theme, type ShellPalette } from "./theme"
 import { useT } from "./translations"
+import ShellTopBar from "./topbar"
+import ShellBackdrop from "./backdrop"
 
 type NavView = "home" | "screenshots" | "projects"
+
+const NAV_COLLAPSED_KEY = "annotator_nav_collapsed"
 
 async function quickDownload(p: Project) {
   const pg = p.pages[0]
@@ -48,8 +51,13 @@ function formatBytes(n: number): string {
 
 // ── Sidebar ──────────────────────────────────────────────────────────────────
 
-function Sidebar({ th, nav, setNav }: { th: Theme; nav: NavView; setNav: (v: NavView) => void }) {
+function Sidebar({ th, nav, setNav, collapsed, onToggle }: {
+  th: Theme; nav: NavView; setNav: (v: NavView) => void;
+  collapsed: boolean; onToggle: () => void;
+}) {
   const { t } = useT()
+  const sh = th.shell
+  const width = collapsed ? 68 : 264
 
   const navItems: { key: NavView; icon: any; label: string }[] = [
     { key: "home", icon: I.home, label: t("home") },
@@ -59,57 +67,101 @@ function Sidebar({ th, nav, setNav }: { th: Theme; nav: NavView; setNav: (v: Nav
 
   return (
     <aside style={{
-      width: 232, minWidth: 232, height: "100%", background: th.surface,
-      borderRight: `1px solid ${th.border}`, display: "flex", flexDirection: "column",
-      overflowY: "auto", boxSizing: "border-box",
+      position: "relative", width, minWidth: width, height: "100%",
+      background: sh.navBg, display: "flex", flexDirection: "column",
+      boxSizing: "border-box", overflow: "hidden", transition: "width .16s ease",
     }}>
-      <div style={{ padding: "12px 10px 4px", display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ position: "absolute", inset: 0, background: sh.navGlow, pointerEvents: "none" }} />
+
+      {/* Brand */}
+      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 11, padding: collapsed ? "20px 0" : "20px 16px 20px 20px", justifyContent: collapsed ? "center" : undefined }}>
+        {!collapsed && (
+          <>
+            <span style={{ display: "flex", color: sh.navText, flexShrink: 0 }}>
+              <span style={{ display: "flex", transform: "scale(1.35)" }}>{I.logoStack}</span>
+            </span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: sh.navText, letterSpacing: "-.1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {t("appName")}
+            </span>
+          </>
+        )}
+        <button
+          onClick={onToggle}
+          title={collapsed ? t("expandSidebar") : t("collapseSidebar")}
+          aria-label={collapsed ? t("expandSidebar") : t("collapseSidebar")}
+          aria-expanded={!collapsed}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 8, border: "none", background: "transparent", color: sh.navTextMuted, cursor: "pointer", flexShrink: 0, padding: 0 }}
+        >
+          <span style={{ display: "flex", transform: "scale(.8)" }}>{collapsed ? I.chevRR : I.chevLL}</span>
+        </button>
+      </div>
+
+      {/* Nav */}
+      <nav style={{ position: "relative", padding: collapsed ? "4px 10px" : "4px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
         {navItems.map((item) => {
           const active = item.key === nav
           return (
-            <button key={item.key} onClick={() => setNav(item.key)} style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 12,
-              padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-              background: active ? th.accentSoft : "transparent",
-              color: active ? th.accent : th.text,
-              fontWeight: active ? 700 : 500, fontSize: 15, textAlign: "left",
+            <button key={item.key} onClick={() => setNav(item.key)} title={collapsed ? item.label : undefined} style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 13,
+              padding: collapsed ? "11px 0" : "11px 14px", borderRadius: 10, cursor: "pointer",
+              textAlign: "left", justifyContent: collapsed ? "center" : undefined,
+              background: active ? sh.navActiveBg : "transparent",
+              border: `1px solid ${active ? sh.navActiveBorder : "transparent"}`,
+              color: active ? sh.navText : sh.navTextMuted,
+              fontWeight: active ? 600 : 500, fontSize: 14.5, fontFamily: "inherit",
             }}>
-              <span style={{ color: active ? th.accent : th.textMuted, display: "flex" }}>{item.icon}</span>
-              {item.label}
+              <span style={{ display: "flex", flexShrink: 0 }}>{item.icon}</span>
+              {!collapsed && item.label}
             </button>
           )
         })}
-      </div>
-
-      <div style={{ height: 1, background: th.border, margin: "4px 0" }} />
+      </nav>
 
       <div style={{ flex: 1 }} />
 
-      <div style={{ padding: "12px 16px", borderTop: `1px solid ${th.border}` }}>
-        <div style={{ fontSize: 10.5, color: th.textFaint }}>
-          © 2025 Screenshot Annotator v1.0.0
+      {!collapsed && (
+        <div style={{ position: "relative", padding: "16px 20px", borderTop: `1px solid ${sh.navBorder}` }}>
+          <div style={{ fontSize: 10.5, color: sh.navTextMuted }}>
+            © 2025 Screenshot Annotator v1.0.0
+          </div>
         </div>
-      </div>
+      )}
     </aside>
   )
 }
 
 // ── Feature card ─────────────────────────────────────────────────────────────
 
-function FeatureCard({ th, icon, iconBg, iconColor, title, desc }: { th: Theme; icon: any; iconBg: string; iconColor: string; title: string; desc: string }) {
+function FeatureCard({ sh, icon, title, desc }: { sh: ShellPalette; icon: any; title: string; desc: string }) {
   return (
-    <div style={{ flex: "1 1 180px", minWidth: 180, padding: "18px 16px 16px", borderRadius: 14, background: th.surface, border: `1px solid ${th.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ width: 40, height: 40, borderRadius: 12, background: iconBg, color: iconColor, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
-      <div style={{ fontSize: 13.5, fontWeight: 700 }}>{title}</div>
-      <div style={{ fontSize: 12, color: th.textMuted, lineHeight: 1.5 }}>{desc}</div>
+    <div style={{
+      position: "relative", flex: "1 1 180px", minWidth: 180, padding: "20px 18px 18px",
+      borderRadius: 14, background: sh.surface, border: `1px solid ${sh.border}`,
+      display: "flex", flexDirection: "column", gap: 9,
+    }}>
+      <div style={{
+        position: "absolute", top: 16, right: 16, width: 26, height: 26, borderRadius: "50%",
+        border: `1px solid ${sh.border}`, color: sh.textMuted,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <span style={{ display: "flex", transform: "scale(.72)" }}>{I.chevR}</span>
+      </div>
+      <div style={{
+        width: 44, height: 44, borderRadius: 13, background: sh.inkTile, color: sh.ink,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        {icon}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: sh.text }}>{title}</div>
+      <div style={{ fontSize: 12.5, color: sh.textMuted, lineHeight: 1.55 }}>{desc}</div>
     </div>
   )
 }
 
 // ── Row item shared ───────────────────────────────────────────────────────────
 
-function ProjectRowItem({ p, th, t, onOpen, onDelete, showAnnotations }: {
-  p: Project; th: Theme; t: (k: string, v?: any) => string;
+function ProjectRowItem({ p, sh, t, onOpen, onDelete, showAnnotations }: {
+  p: Project; sh: ShellPalette; t: (k: string, v?: any) => string;
   onOpen: () => void; onDelete: () => void; showAnnotations?: boolean
 }) {
   const pg = p.pages[0]
@@ -119,39 +171,39 @@ function ProjectRowItem({ p, th, t, onOpen, onDelete, showAnnotations }: {
 
   return (
     <div onClick={onOpen}
-      style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", borderRadius: 12, background: th.surface, border: `1px solid ${th.border}`, cursor: "pointer", transition: "box-shadow .15s" }}
-      onMouseEnter={(e) => (e.currentTarget.style.boxShadow = th.shadow)}
+      style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", borderRadius: 12, background: sh.surface, border: `1px solid ${sh.border}`, cursor: "pointer", transition: "box-shadow .15s" }}
+      onMouseEnter={(e) => (e.currentTarget.style.boxShadow = sh.shadow)}
       onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
     >
-      <div style={{ width: 80, height: 50, borderRadius: 8, overflow: "hidden", background: th.surfaceAlt, flexShrink: 0 }}>
+      <div style={{ width: 80, height: 50, borderRadius: 8, overflow: "hidden", background: sh.surfaceAlt, flexShrink: 0 }}>
         {pg?.dataUrl && <img src={pg.dataUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
           <span style={{ fontSize: 13.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pg?.title || p.name}</span>
-          <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 5, background: th.accentSoft, color: th.accent }}>{ext}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 5, background: sh.inkTile, color: sh.textMuted }}>{ext}</span>
         </div>
-        <div style={{ fontSize: 11.5, color: th.textMuted }}>
+        <div style={{ fontSize: 11.5, color: sh.textMuted }}>
           {pg ? `${pg.w} × ${pg.h} px` : ""}
           {approxBytes > 0 ? ` · ${formatBytes(approxBytes)}` : ""}
           {p.pages.length > 1 ? ` · ${p.pages.length} ${t("pages")}` : ""}
         </div>
-        <div style={{ fontSize: 11, color: th.textFaint, marginTop: 2 }}>
+        <div style={{ fontSize: 11, color: sh.textFaint, marginTop: 2 }}>
           {showAnnotations && totalAnns > 0 ? `${totalAnns} ${t("annotationToolsLabel").toLowerCase()} · ` : ""}
           {timeAgo(p.updatedAt)}
         </div>
       </div>
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
         <button onClick={() => quickDownload(p)} title={t("downloadPng")}
-          style={{ width: 32, height: 32, border: `1px solid ${th.border}`, borderRadius: 8, background: "none", cursor: "pointer", color: th.textMuted, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          style={{ width: 32, height: 32, border: `1px solid ${sh.border}`, borderRadius: 8, background: "none", cursor: "pointer", color: sh.textMuted, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {I.export}
         </button>
         <button onClick={onOpen} title={t("annotateBtn")}
-          style={{ width: 32, height: 32, border: `1px solid ${th.border}`, borderRadius: 8, background: "none", cursor: "pointer", color: th.textMuted, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          style={{ width: 32, height: 32, border: `1px solid ${sh.border}`, borderRadius: 8, background: "none", cursor: "pointer", color: sh.textMuted, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {I.pen}
         </button>
         <button onClick={onDelete} title={t("deleteProject")}
-          style={{ width: 32, height: 32, border: `1px solid ${th.border}`, borderRadius: 8, background: "none", cursor: "pointer", color: th.textMuted, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          style={{ width: 32, height: 32, border: `1px solid ${sh.border}`, borderRadius: 8, background: "none", cursor: "pointer", color: sh.textMuted, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {I.trash}
         </button>
       </div>
@@ -161,17 +213,17 @@ function ProjectRowItem({ p, th, t, onOpen, onDelete, showAnnotations }: {
 
 // ── My Screenshots view ───────────────────────────────────────────────────────
 
-function ScreenshotsView({ projects, th, t, onOpen, onDelete, onAdd }: {
-  projects: Project[]; th: Theme; t: (k: string, v?: any) => string;
+function ScreenshotsView({ projects, sh, t, onOpen, onDelete, onAdd }: {
+  projects: Project[]; sh: ShellPalette; t: (k: string, v?: any) => string;
   onOpen: (p: Project) => void; onDelete: (p: Project) => void; onAdd: () => void
 }) {
   if (projects.length === 0) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: th.textMuted, paddingTop: 80 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: sh.textMuted, paddingTop: 80 }}>
         <div style={{ fontSize: 36 }}>🖼️</div>
         <div style={{ fontSize: 15, fontWeight: 600 }}>{t("noScreenshotsYet")}</div>
-        <div style={{ fontSize: 13, color: th.textFaint }}>{t("uploadToGetStarted")}</div>
-        <button onClick={onAdd} style={{ marginTop: 8, padding: "9px 22px", borderRadius: 10, border: "none", background: th.accent, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+        <div style={{ fontSize: 13, color: sh.textFaint }}>{t("uploadToGetStarted")}</div>
+        <button onClick={onAdd} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 999, border: "none", background: sh.btn, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
           {t("uploadScreenshotBtn")}
         </button>
       </div>
@@ -183,11 +235,11 @@ function ScreenshotsView({ projects, th, t, onOpen, onDelete, onAdd }: {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>{t("myScreenshots")}</h2>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: th.textMuted }}>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: sh.textMuted }}>
             {projects.length} {t("screenshotsCount", { count: "", plural: "" }).trim()} — {t("originalInputImages")}
           </p>
         </div>
-        <button onClick={onAdd} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 9, border: "none", background: th.accent, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+        <button onClick={onAdd} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, border: "none", background: sh.btn, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
           {I.plus} {t("uploadScreenshotBtn")}
         </button>
       </div>
@@ -197,28 +249,28 @@ function ScreenshotsView({ projects, th, t, onOpen, onDelete, onAdd }: {
           const pg = p.pages[0]
           return (
             <div key={p.id} onClick={() => onOpen(p)}
-              style={{ borderRadius: 12, overflow: "hidden", background: th.surface, border: `1px solid ${th.border}`, cursor: "pointer", transition: "box-shadow .15s" }}
-              onMouseEnter={(e) => (e.currentTarget.style.boxShadow = th.shadow)}
+              style={{ borderRadius: 12, overflow: "hidden", background: sh.surface, border: `1px solid ${sh.border}`, cursor: "pointer", transition: "box-shadow .15s" }}
+              onMouseEnter={(e) => (e.currentTarget.style.boxShadow = sh.shadow)}
               onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
             >
-              <div style={{ aspectRatio: "16/10", background: th.surfaceAlt, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ aspectRatio: "16/10", background: sh.surfaceAlt, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {pg?.dataUrl
                   ? <img src={pg.dataUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <span style={{ color: th.textFaint, fontSize: 12 }}>{t("preview")}</span>}
+                  : <span style={{ color: sh.textFaint, fontSize: 12 }}>{t("preview")}</span>}
               </div>
               <div style={{ padding: "10px 12px" }}>
                 <div style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pg?.title || p.name}</div>
-                <div style={{ fontSize: 11, color: th.textMuted, marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: sh.textMuted, marginTop: 2 }}>
                   {pg ? `${pg.w} × ${pg.h}` : ""} · {timeAgo(p.createdAt)}
                 </div>
               </div>
               <div style={{ padding: "0 12px 10px", display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => onOpen(p)}
-                  style={{ flex: 1, padding: "5px 0", borderRadius: 7, border: `1px solid ${th.border}`, background: "none", cursor: "pointer", fontSize: 11.5, fontWeight: 600, color: th.accent }}>
+                  style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1px solid ${sh.border}`, background: "none", cursor: "pointer", fontSize: 11.5, fontWeight: 600, color: sh.text, fontFamily: "inherit" }}>
                   {t("annotateBtn")}
                 </button>
                 <button onClick={() => onDelete(p)}
-                  style={{ width: 30, borderRadius: 7, border: `1px solid ${th.border}`, background: "none", cursor: "pointer", color: th.textFaint, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  style={{ width: 30, borderRadius: 8, border: `1px solid ${sh.border}`, background: "none", cursor: "pointer", color: sh.textFaint, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {I.trash}
                 </button>
               </div>
@@ -232,18 +284,18 @@ function ScreenshotsView({ projects, th, t, onOpen, onDelete, onAdd }: {
 
 // ── Projects view ─────────────────────────────────────────────────────────────
 
-function ProjectsView({ projects, th, t, onOpen, onDelete }: {
-  projects: Project[]; th: Theme; t: (k: string, v?: any) => string;
+function ProjectsView({ projects, sh, t, onOpen, onDelete }: {
+  projects: Project[]; sh: ShellPalette; t: (k: string, v?: any) => string;
   onOpen: (p: Project) => void; onDelete: (p: Project) => void;
 }) {
   const annotated = projects.filter((p) => p.pages.some((pg) => pg.annotations.length > 0))
 
   if (annotated.length === 0) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: th.textMuted, paddingTop: 80 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: sh.textMuted, paddingTop: 80 }}>
         <div style={{ fontSize: 36 }}>✏️</div>
         <div style={{ fontSize: 15, fontWeight: 600 }}>{t("noAnnotatedProjects")}</div>
-        <div style={{ fontSize: 13, color: th.textFaint }}>{t("annotateToSeeHere")}</div>
+        <div style={{ fontSize: 13, color: sh.textFaint }}>{t("annotateToSeeHere")}</div>
       </div>
     )
   }
@@ -252,13 +304,13 @@ function ProjectsView({ projects, th, t, onOpen, onDelete }: {
     <>
       <div style={{ marginBottom: 18 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>{t("projectsLabel")}</h2>
-        <p style={{ margin: "4px 0 0", fontSize: 13, color: th.textMuted }}>
+        <p style={{ margin: "4px 0 0", fontSize: 13, color: sh.textMuted }}>
           {annotated.length} {t("projectsLabel").toLowerCase()}
         </p>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {annotated.map((p) => (
-          <ProjectRowItem key={p.id} p={p} th={th} t={t} showAnnotations
+          <ProjectRowItem key={p.id} p={p} sh={sh} t={t} showAnnotations
             onOpen={() => onOpen(p)}
             onDelete={() => onDelete(p)}
           />
@@ -270,8 +322,8 @@ function ProjectsView({ projects, th, t, onOpen, onDelete }: {
 
 // ── Home view ─────────────────────────────────────────────────────────────────
 
-function HomeView({ th, t, projects, drag, setDrag, fileRef, onOpen, onDelete }: {
-  th: Theme; t: (k: string, v?: any) => string; projects: Project[];
+function HomeView({ sh, t, projects, drag, setDrag, fileRef, onOpen, onDelete }: {
+  sh: ShellPalette; t: (k: string, v?: any) => string; projects: Project[];
   drag: boolean; setDrag: (b: boolean) => void;
   fileRef: React.RefObject<HTMLInputElement>;
   onOpen: (p: Project) => void; onDelete: (p: Project) => void;
@@ -280,18 +332,20 @@ function HomeView({ th, t, projects, drag, setDrag, fileRef, onOpen, onDelete }:
 
   return (
     <>
-      <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800 }}>{t("welcomeBack", { name: " 👋" })}</h1>
-      <p style={{ margin: "0 0 24px", fontSize: 13.5, color: th.textMuted }}>{t("tagline")}</p>
+      {/* Welcome, with a rule down its left edge */}
+      <div style={{ display: "flex", gap: 18, marginBottom: 26 }}>
+        <span style={{ width: 2, borderRadius: 2, background: sh.rule, flexShrink: 0, alignSelf: "stretch" }} />
+        <div>
+          <h1 style={{ margin: "0 0 6px", fontSize: 27, fontWeight: 800, letterSpacing: "-.4px" }}>{t("welcomeBack", { name: " 👋" })}</h1>
+          <p style={{ margin: 0, fontSize: 14, color: sh.textMuted }}>{t("tagline")}</p>
+        </div>
+      </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
-        <FeatureCard th={th} icon={I.select} iconBg={th.accentSoft} iconColor={th.accent}
-          title={t("featAnnotateTitle")} desc={t("featAnnotateDesc")} />
-        <FeatureCard th={th} icon={I.blur} iconBg="#DCFCE7" iconColor="#16A34A"
-          title={t("featBlurTitle")} desc={t("featBlurDesc")} />
-        <FeatureCard th={th} icon={I.pages} iconBg="#DBEAFE" iconColor="#2563EB"
-          title={t("featPagesTitle")} desc={t("featPagesDesc")} />
-        <FeatureCard th={th} icon={I.export} iconBg="#FEF3C7" iconColor="#D97706"
-          title={t("featExportTitle")} desc={t("featExportDesc")} />
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 24 }}>
+        <FeatureCard sh={sh} icon={I.select} title={t("featAnnotateTitle")} desc={t("featAnnotateDesc")} />
+        <FeatureCard sh={sh} icon={I.blur} title={t("featBlurTitle")} desc={t("featBlurDesc")} />
+        <FeatureCard sh={sh} icon={I.pages} title={t("featPagesTitle")} desc={t("featPagesDesc")} />
+        <FeatureCard sh={sh} icon={I.export} title={t("featExportTitle")} desc={t("featExportDesc")} />
       </div>
 
       {/* Upload zone */}
@@ -301,25 +355,29 @@ function HomeView({ th, t, projects, drag, setDrag, fileRef, onOpen, onDelete }:
         onDrop={(e) => { e.preventDefault(); setDrag(false); fileRef.current?.click() }}
         onClick={() => fileRef.current?.click()}
         style={{
-          border: `2px dashed ${drag ? th.accent : th.accentBorder}`,
-          borderRadius: 16, background: drag ? th.accentSoft : th.surface,
-          padding: "32px 24px", display: "flex", flexDirection: "column",
+          border: `1.5px dashed ${drag ? sh.rule : sh.borderDashed}`,
+          borderRadius: 16, background: drag ? sh.surfaceAlt : "transparent",
+          padding: "44px 24px 38px", display: "flex", flexDirection: "column",
           alignItems: "center", gap: 6, cursor: "pointer", transition: "all .15s", marginBottom: 28,
         }}
       >
-        <div style={{ width: 48, height: 48, borderRadius: 14, background: th.accentSoft, color: th.accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {I.upload}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", background: sh.surface, border: `1px solid ${sh.border}`, color: sh.ink, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ display: "flex", transform: "scale(1.15)" }}>{I.upload}</span>
+          </div>
         </div>
-        <div style={{ fontSize: 15, fontWeight: 700, marginTop: 6 }}>{t("uploadOrPasteTitle")}</div>
-        <div style={{ fontSize: 12.5, color: th.textMuted, textAlign: "center" }}>{t("dragDropBrowse")}</div>
-        <div style={{ fontSize: 11.5, color: th.textFaint }}>{t("formats")}</div>
+        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-.3px" }}>{t("uploadOrPasteTitle")}</div>
+        <div style={{ fontSize: 13, color: sh.textMuted, textAlign: "center" }}>{t("dragDropBrowse")}</div>
+        <div style={{ fontSize: 12.5, color: sh.textFaint }}>{t("formats")}</div>
         <button
           onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
-          style={{ marginTop: 8, padding: "9px 24px", borderRadius: 10, border: "none", background: th.accent, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = sh.btnHover)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = sh.btn)}
+          style={{ marginTop: 14, padding: "11px 26px", borderRadius: 999, border: "none", background: sh.btn, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 9, fontFamily: "inherit", boxShadow: "0 6px 18px rgba(20,25,32,.18)" }}
         >
-          {I.pages} {t("browseFiles")}
+          {I.folder} {t("browseFiles")}
         </button>
-        <div style={{ fontSize: 11.5, color: th.textFaint }}>
+        <div style={{ fontSize: 12.5, color: sh.textFaint, marginTop: 10 }}>
           {t("orPasteImageWith")} {isMac ? "⌘" : "Ctrl"} + V
         </div>
       </div>
@@ -331,7 +389,7 @@ function HomeView({ th, t, projects, drag, setDrag, fileRef, onOpen, onDelete }:
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {projects.slice(0, 5).map((p) => (
-              <ProjectRowItem key={p.id} p={p} th={th} t={t}
+              <ProjectRowItem key={p.id} p={p} sh={sh} t={t}
                 onOpen={() => onOpen(p)}
                 onDelete={() => onDelete(p)}
               />
@@ -350,16 +408,17 @@ interface Props {
   onNew: (p: Project) => void
   onOpen: (p: Project) => void
   onToast: (m: string, e?: boolean) => void
-  headerExtra?: ReactNode
   backend?: "checking" | "ok" | "offline"
 }
 
-export default function Home({ projects: ext, onNew, onOpen, onToast, headerExtra, backend = "checking" }: Props) {
+export default function Home({ projects: ext, onNew, onOpen, onToast, backend = "checking" }: Props) {
   const [projects, setProjects] = useState<Project[]>(ext)
   const [nav, setNav] = useState<NavView>("home")
+  const [railCollapsed, setRailCollapsed] = useState(() => sessionStorage.getItem(NAV_COLLAPSED_KEY) === "1")
   const fileRef = useRef<HTMLInputElement>(null)
   const [drag, setDrag] = useState(false)
   const th = useTheme()
+  const sh = th.shell
   const { t } = useT()
 
   useEffect(() => { setProjects(ext) }, [ext])
@@ -406,44 +465,45 @@ export default function Home({ projects: ext, onNew, onOpen, onToast, headerExtr
   const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform)
 
   return (
-    <div style={{ height: "100vh", background: th.bg, fontFamily: "Inter, -apple-system, sans-serif", color: th.text, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ height: "100vh", background: sh.pageBg, fontFamily: "Inter, -apple-system, sans-serif", color: sh.text, display: "flex", overflow: "hidden" }}>
+      <Sidebar
+        th={th}
+        nav={nav}
+        setNav={setNav}
+        collapsed={railCollapsed}
+        onToggle={() => setRailCollapsed((c) => { sessionStorage.setItem(NAV_COLLAPSED_KEY, c ? "0" : "1"); return !c })}
+      />
 
-      {/* Header */}
-      <header style={{ height: 54, flexShrink: 0, display: "flex", alignItems: "center", gap: 12, padding: "0 20px", background: th.surface, borderBottom: `3px solid ${th.accent}` }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: th.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>{I.export}</div>
-        <span style={{ fontSize: 15, fontWeight: 800 }}>{t("appName")}</span>
-        <span style={{ fontSize: 12, color: th.textMuted }}>{t("tagline")}</span>
-        <div style={{ flex: 1 }} />
-      </header>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <ShellTopBar />
 
-      {/* Body */}
-      <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
-        <Sidebar th={th} nav={nav} setNav={setNav} />
-        <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "28px 32px" }}>
-          {nav === "home" && (
-            <HomeView th={th} t={t} projects={projects} drag={drag} setDrag={setDrag} fileRef={fileRef} onOpen={onOpen} onDelete={handleDelete} />
-          )}
-          {nav === "screenshots" && (
-            <ScreenshotsView projects={projects} th={th} t={t} onOpen={onOpen} onDelete={handleDelete} onAdd={() => fileRef.current?.click()} />
-          )}
-          {nav === "projects" && (
-            <ProjectsView projects={projects} th={th} t={t} onOpen={onOpen} onDelete={handleDelete} />
-          )}
+        <main style={{ position: "relative", flex: 1, minHeight: 0, overflowY: "auto", padding: "30px 34px" }}>
+          <ShellBackdrop sh={sh} />
+          <div style={{ position: "relative", zIndex: 1 }}>
+            {nav === "home" && (
+              <HomeView sh={sh} t={t} projects={projects} drag={drag} setDrag={setDrag} fileRef={fileRef} onOpen={onOpen} onDelete={handleDelete} />
+            )}
+            {nav === "screenshots" && (
+              <ScreenshotsView projects={projects} sh={sh} t={t} onOpen={onOpen} onDelete={handleDelete} onAdd={() => fileRef.current?.click()} />
+            )}
+            {nav === "projects" && (
+              <ProjectsView projects={projects} sh={sh} t={t} onOpen={onOpen} onDelete={handleDelete} />
+            )}
+          </div>
         </main>
+
+        <footer style={{ height: 44, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 34px", borderTop: `1px solid ${sh.border}`, fontSize: 12, color: sh.textFaint, gap: 16 }}>
+          <div style={{ flex: 1 }} />
+          <span>{isMac ? "⌘" : "Ctrl"} + V to paste image</span>
+          <span style={{ color: sh.border }}>·</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: backend === "ok" ? sh.textMuted : sh.textFaint }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: backend === "ok" ? "#22C55E" : backend === "offline" ? "#F59E0B" : "#CBD5E1", display: "inline-block" }} />
+            {backend === "ok" ? t("backendOk") : backend === "offline" ? t("backendOffline") : t("backendChecking")}
+          </div>
+        </footer>
       </div>
 
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { onFiles(e.target.files); e.target.value = "" }} />
-
-      {/* Footer */}
-      <footer style={{ height: 40, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 20px", background: th.surface, borderTop: `1px solid ${th.border}`, fontSize: 11.5, color: th.textFaint, gap: 16 }}>
-        <div style={{ flex: 1 }} />
-        <span>{isMac ? "⌘" : "Ctrl"} + V to paste image</span>
-        <span style={{ color: th.border }}>·</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, color: backend === "ok" ? "#15803D" : th.textFaint }}>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: backend === "ok" ? "#22C55E" : backend === "offline" ? "#F59E0B" : "#CBD5E1", display: "inline-block" }} />
-          {backend === "ok" ? t("backendOk") : backend === "offline" ? t("backendOffline") : t("backendChecking")}
-        </div>
-      </footer>
     </div>
   )
 }

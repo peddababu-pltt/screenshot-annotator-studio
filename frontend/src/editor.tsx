@@ -19,6 +19,7 @@ import PagesLayersColumn from "./sidebar"
 import CanvasToolbar from "./toppanel"
 import ExportModal, { Preview } from "./export"
 import { useTheme } from "./theme"
+import ShellBackdrop from "./backdrop"
 import { useT } from "./translations"
 
 interface Props {
@@ -35,6 +36,7 @@ const cloneProj = (p: Project): Project => JSON.parse(JSON.stringify(p))
 
 export default function Editor({ project: initial, onProject, onExit, onToast, headerExtra }: Props) {
   const th = useTheme()
+  const sh = th.shell
   const { t } = useT()
   const [proj, setProj] = useState<Project>(() => cloneProj(initial))
   const [tool, setTool] = useState<Tool>("select")
@@ -53,9 +55,10 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
   const [ocrScanning, setOcrScanning] = useState(false)
   const [ocrHover, setOcrHover] = useState<number | null>(null)
   const [pendingRegion, setPendingRegion] = useState<OcrRegion | null>(null)
-  const [railW, setRailW] = useState(168)
-  const [sidebarW, setSidebarW] = useState(220)
-  const [panelW, setPanelW] = useState(276)
+  const [railW, setRailW] = useState(244)
+  const [railCollapsed, setRailCollapsed] = useState(false)
+  const [sidebarW, setSidebarW] = useState(236)
+  const [panelW, setPanelW] = useState(292)
   const [stage, setStage] = useState({ w: 0, h: 0 })
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
   const [dirty, setDirty] = useState(false)
@@ -838,7 +841,16 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
   }
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: th.bg, color: th.text, fontFamily: "Inter, -apple-system, sans-serif" }}>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: sh.headerBg, color: th.text, fontFamily: "Inter, -apple-system, sans-serif" }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        <div style={{ width: railCollapsed ? 68 : railW, flexShrink: 0, minHeight: 0, transition: "width .16s ease" }}>
+          <ToolbarBar
+            tool={tool} setTool={setTool} color={color} setColor={setColor} sw={sw} setSw={setSw}
+            collapsed={railCollapsed} onToggle={() => setRailCollapsed((c) => !c)}
+          />
+        </div>
+        {!railCollapsed && <Resizer width={railW} setWidth={setRailW} min={150} max={320} />}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
       <Header
         name={page?.title || "Untitled"}
         pageCount={proj.pages.length}
@@ -852,12 +864,10 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
         onPreview={() => setView("preview")}
         onExport={() => setPop("export")}
       />
-      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <div style={{ width: railW, flexShrink: 0, borderRight: `1px solid ${HEADER_BORDER}`, minHeight: 0 }}>
-          <ToolbarBar tool={tool} setTool={setTool} color={color} setColor={setColor} sw={sw} setSw={setSw} />
-        </div>
-        <Resizer width={railW} setWidth={setRailW} min={140} max={320} />
-        <div style={{ width: sidebarW, flexShrink: 0, borderRight: `1px solid ${th.border}`, minHeight: 0 }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0, background: sh.well, position: "relative" }}>
+        <ShellBackdrop sh={sh} opacity={0.7} />
+        <div style={{ width: sidebarW, flexShrink: 0, minHeight: 0, padding: "12px 0 12px 12px", boxSizing: "border-box", position: "relative", zIndex: 1 }}>
+          <div style={{ height: "100%", borderRadius: 14, overflow: "hidden", border: `1px solid ${sh.border}`, boxShadow: sh.cardShadow, background: th.surface }}>
           <PagesLayersColumn
             proj={proj}
             onSwitch={switchPage}
@@ -869,9 +879,10 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
             onLayers={rightPanelOnLayers}
             onDup={dupAnnById}
           />
+          </div>
         </div>
         <Resizer width={sidebarW} setWidth={setSidebarW} min={160} max={420} />
-        <div ref={stageRef} style={{ flex: 1, position: "relative", overflow: "hidden", background: th.mode === "dark" ? "#0A0B10" : "#ECEDF2", touchAction: "none" }}>
+        <div ref={stageRef} style={{ flex: 1, position: "relative", overflow: "hidden", background: "transparent", touchAction: "none" }}>
           <CanvasToolbar
             hasSel={sel.length > 0}
             locked={sel.length === 1 ? !!page.annotations.find((a) => a.id === sel[0])?.locked : false}
@@ -980,7 +991,8 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
           </div>
         </div>
         <Resizer width={panelW} setWidth={setPanelW} min={220} max={480} invert />
-        <div style={{ width: panelW, flexShrink: 0, borderLeft: `1px solid ${th.border}`, minHeight: 0 }}>
+        <div style={{ width: panelW, flexShrink: 0, minHeight: 0, padding: "12px 12px 12px 0", boxSizing: "border-box", position: "relative", zIndex: 1 }}>
+          <div style={{ height: "100%", borderRadius: 14, overflow: "hidden", border: `1px solid ${sh.border}`, boxShadow: sh.cardShadow, background: th.surface }}>
           <RightPanel
             page={page}
             sel={sel}
@@ -999,6 +1011,9 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
             onSel={(id, mult) => setSel((cur) => (mult ? (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]) : [id]))}
             onDup={dupAnnById}
           />
+          </div>
+        </div>
+      </div>
         </div>
       </div>
       <BottomBar
@@ -1018,34 +1033,48 @@ export default function Editor({ project: initial, onProject, onExit, onToast, h
 
 // ------------------------------------------------------------------ chrome
 
-const HEADER_BG = "#0B1220"
-const HEADER_BORDER = "#1E2A3F"
-
 function Header({ name, pageCount, dirty, canUndo, canRedo, onHome, onUndo, onRedo, onSave, onPreview, onExport }) {
   const th = useTheme()
+  const sh = th.shell
   const { t } = useT()
-  const pill = { padding: "7px 12px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer", border: "none", background: "#fff", color: "#111", display: "inline-flex", alignItems: "center", gap: 5 }
-  const iconBtn = { width: 34, height: 34, borderRadius: 8, border: "none", cursor: "pointer", background: "#fff", color: "#111", display: "inline-flex", alignItems: "center", justifyContent: "center" }
+  const light = {
+    display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 10,
+    fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+    border: `1px solid ${sh.border}`, background: th.surface, color: sh.text,
+    boxShadow: "0 1px 2px rgba(16,20,26,.05)",
+  }
+  const iconBtn = {
+    width: 36, height: 36, borderRadius: 10, border: "none", cursor: "pointer",
+    background: sh.iconBtn, color: sh.text, display: "inline-flex", alignItems: "center", justifyContent: "center",
+  }
   return (
-    <header style={{ height: 52, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 14px", background: HEADER_BG, borderBottom: `1px solid ${HEADER_BORDER}` }}>
-      <button onClick={onHome} style={pill} title={t("home")}>{I.home} {t("home")}</button>
-      <div style={{ width: 1, height: 22, background: HEADER_BORDER }} />
-      <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", color: "#fff" }}>{t("appName")}</span>
-        <span style={{ color: "#5B6B85", fontSize: 13 }}>/</span>
-        <span style={{ fontSize: 13, color: "#C7D0DE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>{name}</span>
-        {pageCount > 1 && <span style={{ fontSize: 11, color: "#C7D0DE", background: "#1E2A3F", borderRadius: 6, padding: "2px 7px" }}>{pageCount} {t("pages")}</span>}
+    <header style={{ height: 70, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 20px", background: sh.headerBg, borderBottom: `1px solid ${sh.border}` }}>
+      <button onClick={onHome} title={t("home")} style={light}>{I.home} {t("home")}</button>
+      <div style={{ width: 1, height: 24, background: sh.border, margin: "0 4px" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", color: sh.text, letterSpacing: "-.2px" }}>{t("appName")}</span>
+        <span style={{ color: sh.textFaint, fontSize: 14 }}>/</span>
+        <span style={{ fontSize: 13.5, color: sh.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240 }}>{name}</span>
+        {pageCount > 1 && <span style={{ fontSize: 11, color: sh.textMuted, background: sh.iconBtn, borderRadius: 6, padding: "2px 7px" }}>{pageCount} {t("pages")}</span>}
       </div>
       <div style={{ flex: 1 }} />
-      <span style={{ fontSize: 11.5, color: dirty ? "#F59E0B" : "#4ADE80", fontWeight: 600, marginRight: 4 }}>
+      <span style={{ fontSize: 12.5, color: dirty ? "#B45309" : "#127A6B", fontWeight: 600, marginRight: 6 }}>
         ● {dirty ? t("unsaved") : t("saved")}
       </span>
       <button onClick={onUndo} disabled={!canUndo} title="Undo (⌘Z)" style={{ ...iconBtn, opacity: canUndo ? 1 : 0.4 }}>{I.undo}</button>
       <button onClick={onRedo} disabled={!canRedo} title="Redo (⌘⇧Z)" style={{ ...iconBtn, opacity: canRedo ? 1 : 0.4 }}>{I.redo}</button>
-      <div style={{ width: 1, height: 22, background: HEADER_BORDER }} />
-      <button onClick={onSave} title="Save (⌘S)" style={pill}>{I.save} {t("save")}</button>
-      <button onClick={onPreview} title={t("preview")} style={pill}>{I.preview} {t("preview")}</button>
-      <button onClick={onExport} title={t("export")} style={{ ...pill, background: th.accent, color: "#fff" }}>{I.export} {t("export")}</button>
+      <div style={{ width: 1, height: 24, background: sh.border, margin: "0 4px" }} />
+      <button onClick={onSave} title="Save (⌘S)" style={light}>{I.save} {t("save")}</button>
+      <button onClick={onPreview} title={t("preview")} style={light}>{I.preview} {t("preview")}</button>
+      <button
+        onClick={onExport}
+        title={t("export")}
+        onMouseEnter={(e) => (e.currentTarget.style.background = sh.btnDarkHover)}
+        onMouseLeave={(e) => (e.currentTarget.style.background = sh.btnDark)}
+        style={{ ...light, background: sh.btnDark, color: "#fff", border: "none", boxShadow: "0 4px 14px rgba(20,25,32,.22)" }}
+      >
+        {I.export} {t("export")}
+      </button>
     </header>
   )
 }
@@ -1079,47 +1108,85 @@ const TOOL_LABEL_KEY: Record<string, string> = {
   insertImage: "toolInsertImage", background: "toolBackground", textEdit: "toolTextEdit",
 }
 
-function ToolbarBar({ tool, setTool, color, setColor, sw, setSw }) {
+function ToolbarBar({ tool, setTool, color, setColor, sw, setSw, collapsed, onToggle }) {
   const th = useTheme()
+  const sh = th.shell
   const { t } = useT()
   return (
-    <aside style={{ width: "100%", height: "100%", background: HEADER_BG, display: "flex", flexDirection: "column", padding: "10px 8px", gap: 1, overflowY: "auto", boxSizing: "border-box" }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#5B6B85", textTransform: "uppercase", letterSpacing: ".5px", padding: "0 6px 6px" }}>{t("tools")}</div>
-      {TOOLS.map((tl) => {
-        const label = t(TOOL_LABEL_KEY[tl.t] || tl.t, undefined, tl.label)
-        return (
-          <button
-            key={tl.t}
-            onClick={() => setTool(tl.t)}
-            title={label + (tl.key ? ` (${tl.key})` : "")}
-            style={{
-              display: "flex", alignItems: "center", gap: 9, padding: "7px 8px", borderRadius: 8, border: "none", cursor: "pointer", textAlign: "left",
-              background: tool === tl.t ? th.accent : "transparent",
-              color: "#fff",
-            }}
-          >
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 18, flexShrink: 0 }}>{tl.icon}</span>
-            <span style={{ fontSize: 12.5, fontWeight: tool === tl.t ? 600 : 500, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
-            {tool === tl.t ? <span style={{ opacity: .85 }}>{I.chevD}</span> : tl.key && <span style={{ fontSize: 10, color: "#5B6B85" }}>{tl.key}</span>}
-          </button>
-        )
-      })}
-      <div style={{ height: 1, background: HEADER_BORDER, margin: "8px 4px" }} />
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 6px" }}>
-        <input type="color" value={color} onChange={(e) => setColor(e.target.value)} title="Annotation color"
-          style={{ width: 26, height: 26, border: `1px solid ${HEADER_BORDER}`, borderRadius: 7, padding: 1, cursor: "pointer", background: "#fff" }} />
-        {SWATCHES.map((c) => (
-          <button key={c} onClick={() => setColor(c)} title={c}
-            style={{ width: 14, height: 14, borderRadius: 4, background: c, border: c === "#FFFFFF" ? `1px solid ${HEADER_BORDER}` : "none", cursor: "pointer", padding: 0, outline: color.toLowerCase() === c.toLowerCase() ? `2px solid ${th.accent}` : "none" }} />
-        ))}
+    <aside style={{ position: "relative", width: "100%", height: "100%", background: sh.navBg, display: "flex", flexDirection: "column", overflow: "hidden", boxSizing: "border-box" }}>
+      <div style={{ position: "absolute", inset: 0, background: sh.navGlow, pointerEvents: "none" }} />
+
+      {/* Brand — matches the home sidebar so the two screens read as one shell */}
+      <div style={{ position: "relative", height: 70, flexShrink: 0, display: "flex", alignItems: "center", gap: 11, padding: collapsed ? "0" : "0 16px", justifyContent: collapsed ? "center" : undefined, borderBottom: `1px solid ${sh.navBorder}` }}>
+        {!collapsed && (
+          <>
+            <span style={{ display: "flex", color: sh.navText, flexShrink: 0 }}>
+              <span style={{ display: "flex", transform: "scale(1.35)" }}>{I.logoStack}</span>
+            </span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 700, color: sh.navText, letterSpacing: "-.1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {t("appName")}
+            </span>
+          </>
+        )}
+        <button
+          onClick={onToggle}
+          title={collapsed ? t("expandSidebar") : t("collapseSidebar")}
+          aria-label={collapsed ? t("expandSidebar") : t("collapseSidebar")}
+          aria-expanded={!collapsed}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 8, border: "none", background: "transparent", color: sh.navTextMuted, cursor: "pointer", flexShrink: 0, padding: 0 }}
+        >
+          <span style={{ display: "flex", transform: "scale(.8)" }}>{collapsed ? I.chevRR : I.chevLL}</span>
+        </button>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "8px 6px 0" }}>
-        <span style={{ fontSize: 11, color: "#C7D0DE" }}>{t("strokeWidth")}</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input type="range" min={1} max={24} value={sw} onChange={(e) => setSw(+e.target.value)} title={t("strokeWidth")}
-            style={{ flex: 1, accentColor: th.accent }} />
-          <input type="number" min={1} max={24} value={sw} onChange={(e) => setSw(Math.max(1, Math.min(24, +e.target.value || 1)))}
-            style={{ width: 36, fontSize: 11, color: "#111", fontWeight: 600, textAlign: "center", border: `1px solid ${HEADER_BORDER}`, borderRadius: 5, background: "#fff", padding: "3px 2px" }} />
+
+      {/* Tools */}
+      <div style={{ position: "relative", flex: 1, minHeight: 0, overflowY: "auto", padding: collapsed ? "12px 8px 4px" : "12px 10px 4px" }}>
+        {!collapsed && <div style={{ fontSize: 10, fontWeight: 700, color: sh.railCaption, textTransform: "uppercase", letterSpacing: ".6px", padding: "0 6px 8px" }}>{t("tools")}</div>}
+        {TOOLS.map((tl) => {
+          const label = t(TOOL_LABEL_KEY[tl.t] || tl.t, undefined, tl.label)
+          const active = tool === tl.t
+          return (
+            <button
+              key={tl.t}
+              onClick={() => setTool(tl.t)}
+              title={label + (tl.key ? ` (${tl.key})` : "")}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 11,
+                padding: collapsed ? "9px 0" : "9px 11px", borderRadius: 9,
+                justifyContent: collapsed ? "center" : undefined,
+                cursor: "pointer", textAlign: "left", marginBottom: 2, fontFamily: "inherit",
+                background: active ? sh.navActiveBg : "transparent",
+                border: `1px solid ${active ? sh.navActiveBorder : "transparent"}`,
+                color: active ? sh.navText : sh.navTextMuted,
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 18, flexShrink: 0 }}>{tl.icon}</span>
+              {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 500, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
+              {!collapsed && (active
+                ? <span style={{ display: "flex", opacity: .7 }}>{I.chevD}</span>
+                : tl.key && <span style={{ fontSize: 11, color: sh.railCaption }}>{tl.key}</span>)}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Colour + stroke width */}
+      <div style={{ position: "relative", flexShrink: 0, padding: collapsed ? "12px 0 16px" : "12px 16px 16px", borderTop: `1px solid ${sh.navBorder}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : undefined, gap: 7, flexWrap: "wrap" }}>
+          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} title="Annotation color"
+            style={{ width: 20, height: 20, border: "none", borderRadius: "50%", padding: 0, cursor: "pointer", background: "transparent", overflow: "hidden", WebkitAppearance: "none", appearance: "none" }} />
+          {!collapsed && SWATCHES.map((c) => (
+            <button key={c} onClick={() => setColor(c)} title={c}
+              style={{ width: 16, height: 16, borderRadius: "50%", background: c, border: c === "#FFFFFF" ? `1px solid ${sh.navBorder}` : "none", cursor: "pointer", padding: 0, boxShadow: color.toLowerCase() === c.toLowerCase() ? `0 0 0 2px ${sh.navBg.includes("gradient") ? "#0E1013" : sh.navBg}, 0 0 0 3.5px ${th.accent}` : "none" }} />
+          ))}
+        </div>
+        <div style={{ display: collapsed ? "none" : "flex", flexDirection: "column", gap: 6, paddingTop: 14 }}>
+          <span style={{ fontSize: 11.5, color: sh.navTextMuted }}>{t("strokeWidth")}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input type="range" min={1} max={24} value={sw} onChange={(e) => setSw(+e.target.value)} title={t("strokeWidth")}
+              style={{ flex: 1, minWidth: 0, accentColor: "#fff" }} />
+            <span style={{ width: 30, flexShrink: 0, fontSize: 11.5, fontWeight: 700, textAlign: "center", color: sh.navText, background: "rgba(255,255,255,.08)", border: `1px solid ${sh.navBorder}`, borderRadius: 6, padding: "3px 0" }}>{sw}</span>
+          </div>
         </div>
       </div>
     </aside>
@@ -1128,26 +1195,36 @@ function ToolbarBar({ tool, setTool, color, setColor, sw, setSw }) {
 
 function BottomBar({ proj, zoom, onZoom, onFit, onSwitch, onRemove, onDup, extra }) {
   const th = useTheme()
+  const sh = th.shell
   const { t } = useT()
-  const chip = { padding: "5px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer", border: `1px solid ${th.border}`, background: th.surface, color: th.text }
+  const chip = {
+    height: 34, minWidth: 34, padding: "0 11px", borderRadius: 10, fontSize: 12.5, cursor: "pointer",
+    border: `1px solid ${sh.border}`, background: th.surface, color: sh.text, fontFamily: "inherit",
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    boxShadow: "0 1px 2px rgba(16,20,26,.05)",
+  }
 
   return (
-    <footer style={{ height: 42, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 12px", background: th.surface, borderTop: `1px solid ${th.border}` }}>
-      <span style={{ fontSize: 12, color: th.textMuted }}>{proj.pages[proj.activePage]?.w}×{proj.pages[proj.activePage]?.h}px</span>
-      <span style={{ fontSize: 12, color: th.textFaint }}>·</span>
-      <span style={{ fontSize: 12, color: th.textMuted }}>{proj.pages[proj.activePage]?.annotations.length || 0} objects</span>
+    <footer style={{ height: 56, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 20px", background: sh.headerBg, borderTop: `1px solid ${sh.border}` }}>
+      <span style={{ fontSize: 12.5, color: sh.textMuted }}>{proj.pages[proj.activePage]?.w}×{proj.pages[proj.activePage]?.h}px</span>
+      <span style={{ fontSize: 12.5, color: sh.textFaint }}>·</span>
+      <span style={{ fontSize: 12.5, color: sh.textMuted }}>{proj.pages[proj.activePage]?.annotations.length || 0} objects</span>
       <div style={{ flex: 1 }} />
-      <div style={{ display: "flex", alignItems: "center", gap: 5, overflowX: "auto" }}>
-        {proj.pages.map((pg, i) => (
-          <div key={pg.id} style={{ display: "flex", alignItems: "center", gap: 3, padding: "3px 6px", borderRadius: 7, background: i === proj.activePage ? th.accentSoft : "transparent", border: "1px solid " + (i === proj.activePage ? th.accentBorder : "transparent"), cursor: "pointer", fontSize: 12 }}
-            onClick={() => onSwitch(i)} title={pg.title}>
-            <span style={{ fontWeight: 700, color: i === proj.activePage ? th.accent : th.textMuted }}>{i + 1}</span>
-            <span style={{ color: th.textMuted, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pg.title}</span>
-            {proj.pages.length > 1 && (
-              <span onClick={(e) => { e.stopPropagation(); onRemove(i) }} title={t("removePage")} style={{ color: th.textFaint, marginLeft: 2, cursor: "pointer" }}>×</span>
-            )}
-          </div>
-        ))}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto" }}>
+        {proj.pages.map((pg, i) => {
+          const active = i === proj.activePage
+          return (
+            <div key={pg.id}
+              onClick={() => onSwitch(i)} title={pg.title}
+              style={{ display: "flex", alignItems: "center", gap: 5, height: 34, padding: "0 11px", borderRadius: 10, cursor: "pointer", fontSize: 12.5, flexShrink: 0, background: active ? th.accentSoft : "transparent", border: `1px solid ${active ? th.accentBorder : "transparent"}` }}>
+              <span style={{ fontWeight: 700, color: active ? th.accent : sh.textMuted }}>{i + 1}</span>
+              <span style={{ color: active ? th.accent : sh.textMuted, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pg.title}</span>
+              {proj.pages.length > 1 && (
+                <span onClick={(e) => { e.stopPropagation(); onRemove(i) }} title={t("removePage")} style={{ color: sh.textFaint, marginLeft: 2, cursor: "pointer" }}>×</span>
+              )}
+            </div>
+          )
+        })}
       </div>
       <button onClick={() => onZoom(Math.max(0.05, zoom / 1.2))} title="Zoom out" style={chip}>{I.zoomOut}</button>
       <button onClick={onFit} title={t("fitToScreen")} style={{ ...chip, fontWeight: 700 }}>{Math.round(zoom * 100)}%</button>

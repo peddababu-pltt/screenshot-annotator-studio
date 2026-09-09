@@ -205,6 +205,9 @@ export const translations = {
     annotationsLabel: "{count} annotation{plural}",
     annotatedProjectsLabel: "{count} annotated project{plural}",
     screenshotsInputLabel: "{count} screenshot{plural} — {sub}",
+    searchPlaceholder: "Search screenshots, projects, or notes…",
+    collapseSidebar: "Collapse sidebar",
+    expandSidebar: "Expand sidebar",
   },
   ko: {
     appName: "스크린샷 주석기",
@@ -400,6 +403,9 @@ export const translations = {
     annotationsLabel: "{count}개 주석",
     annotatedProjectsLabel: "{count}개 주석 프로젝트",
     screenshotsInputLabel: "{count}개 스크린샷 — {sub}",
+    searchPlaceholder: "스크린샷, 프로젝트 또는 메모 검색…",
+    collapseSidebar: "사이드바 접기",
+    expandSidebar: "사이드바 펼치기",
   },
 } satisfies TranslationResources
 
